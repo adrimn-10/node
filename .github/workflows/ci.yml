@@ -12,27 +12,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [18, 20]
+        node-version: [18, 20] # Volví a poner 18 y 20 que se borraron antes
 
     services:
       mysql:
         image: mysql:8.0
         env:
-          # Usamos las variables de entorno definidas en el JOB, no los secrets directamente aquí
-          MYSQL_ROOT_PASSWORD: ${{ env.DB_PASSWORD }}
-          MYSQL_DATABASE: ${{ env.DB_DATABASE }}
-          MYSQL_USER: ${{ env.DB_USER }}
-          MYSQL_PASSWORD: ${{ env.DB_PASSWORD }}
+          # Usamos los valores literales aquí, ya que GitHub no permite ${{ env.VAR }} en este bloque
+          MYSQL_ROOT_PASSWORD: mypassword
+          MYSQL_DATABASE: companydb
+          MYSQL_USER: fazt
+          MYSQL_PASSWORD: faztpassword
         options: >-
-          --health-cmd="mysqladmin ping -h localhost -u ${{ env.DB_USER }} -p${{ env.DB_PASSWORD }}"
+          --health-cmd="mysqladmin ping -h localhost -u fazt -pfaztpassword"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
 
-    # Variables de entorno globales para todo el Job
+    # Variables de entorno globales para todo el Job (Estas se usan en los Steps siguientes)
     env:
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
+      # Aquí usamos los secrets de GitHub:
       DB_USER: ${{ secrets.DB_USER }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       DB_DATABASE: ${{ secrets.DB_NAME }}
@@ -53,7 +54,7 @@ jobs:
 
       - name: Run linter
         run: npm run lint
-        continue-on-error: true # Permite que el workflow continúe si el lint falla
+        continue-on-error: true
 
       - name: Install MySQL client (needed for wait & init)
         run: |
@@ -63,18 +64,20 @@ jobs:
       - name: Wait for MySQL to be ready
         run: |
           echo "Waiting for MySQL..."
-          until mysql -h 127.0.0.1 -u "${{ env.DB_USER }}" -p"${{ env.DB_PASSWORD }}" -e "SELECT 1" ; do
+          # En los steps SÍ podemos usar las variables de entorno del Job:
+          until mysql -h ${{ env.DB_HOST }} -u "${{ env.DB_USER }}" -p"${{ env.DB_PASSWORD }}" -e "SELECT 1" ; do
             sleep 3
           done
         timeout-minutes: 5
 
       - name: Initialize database
         run: |
-          mysql -h 127.0.0.1 -u "${{ env.DB_USER }}" -p"${{ env.DB_PASSWORD }}" "${{ env.DB_DATABASE }}" < db/database.sql
+          # En los steps SÍ podemos usar las variables de entorno del Job:
+          mysql -h ${{ env.DB_HOST }} -u "${{ env.DB_USER }}" -p"${{ env.DB_PASSWORD }}" "${{ env.DB_DATABASE }}" < db/database.sql
 
       - name: Run tests with coverage
         run: npm run test:coverage
-        continue-on-error: true # Permite que el workflow continúe si la cobertura no es suficiente
+        continue-on-error: true
 
       - name: Upload coverage artifact
         if: always()
@@ -82,4 +85,3 @@ jobs:
         with:
           name: coverage-report
           path: coverage/
-
