@@ -1,78 +1,80 @@
-import { pool } from "../db.js";
+import request from "supertest";
+import app from "../src/app.js";
+import { pool } from "../src/db.js";
 
-export const getEmployees = async (req, res) => {
-  try {
-    const [rows] = await pool.query("SELECT * FROM employee");
-    res.json(rows);
-  } catch (error) {
-    return res.status(500).json({ message: "Something goes wrong" });
-  }
-};
+describe("Employees Routes", () => {
+  // Cerramos la conexión a la DB al terminar para evitar el error de "Open Handles"
+  afterAll(async () => {
+    await pool.end();
+  });
 
-export const getEmployee = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const [rows] = await pool.query("SELECT * FROM employee WHERE id = ?", [
-      id,
-    ]);
+  it("should respond a list of employees", async () => {
+    const res = await request(app).get("/api/employees");
+    expect(res.statusCode).toEqual(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
 
-    if (rows.length <= 0) {
-      return res.status(404).json({ message: "Employee not found" });
-    }
+  it("should create a new employee", async () => {
+    const res = await request(app)
+      .post("/api/employees")
+      .send({ name: "John Doe", salary: 3000 });
+    expect(res.statusCode).toEqual(201);
+    expect(res.body).toHaveProperty("id");
+  });
 
-    res.json(rows[0]);
-  } catch (error) {
-    return res.status(500).json({ message: "Something goes wrong" });
-  }
-};
+  it("should get an employee by id", async () => {
+    // Primero creamos uno para asegurar que el ID existe
+    const result = await request(app)
+      .post("/api/employees")
+      .send({ name: "Jane Doe", salary: 4000 });
+    const id = result.body.id;
 
-export const deleteEmployee = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const [rows] = await pool.query("DELETE FROM employee WHERE id = ?", [id]);
+    const res = await request(app).get(`/api/employees/${id}`);
+    expect(res.statusCode).toEqual(200);
+    expect(res.body.name).toEqual("Jane Doe");
+  });
 
-    if (rows.affectedRows <= 0) {
-      return res.status(404).json({ message: "Employee not found" });
-    }
+  it("should return 404 when getting a non-existing employee", async () => {
+    const res = await request(app).get("/api/employees/9999");
+    expect(res.statusCode).toEqual(404);
+    expect(res.body.message).toEqual("Employee not found");
+  });
 
-    res.sendStatus(204);
-  } catch (error) {
-    return res.status(500).json({ message: "Something goes wrong" });
-  }
-};
+  it("should update an employee", async () => {
+    // Creamos uno para actualizarlo
+    const result = await request(app)
+      .post("/api/employees")
+      .send({ name: "Before Update", salary: 1000 });
+    const id = result.body.id;
 
-export const createEmployee = async (req, res) => {
-  try {
-    const { name, salary } = req.body;
-    const [rows] = await pool.query(
-      "INSERT INTO employee (name, salary) VALUES (?, ?)",
-      [name, salary]
-    );
-    res.status(201).json({ id: rows.insertId, name, salary });
-  } catch (error) {
-    return res.status(500).json({ message: "Something goes wrong" });
-  }
-};
+    const res = await request(app)
+      .patch(`/api/employees/${id}`)
+      .send({ name: "After Update", salary: 5000 });
+    
+    expect(res.statusCode).toEqual(200);
+    expect(res.body.name).toEqual("After Update");
+    expect(res.body.salary).toEqual(5000);
+  });
 
-export const updateEmployee = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, salary } = req.body;
+  it("should return 404 when updating a non-existing employee", async () => {
+    const res = await request(app)
+      .patch("/api/employees/9999")
+      .send({ name: "Ghost" });
+    expect(res.statusCode).toEqual(404);
+  });
 
-    const [result] = await pool.query(
-      "UPDATE employee SET name = IFNULL(?, name), salary = IFNULL(?, salary) WHERE id = ?",
-      [name, salary, id]
-    );
+  it("should delete an employee by id", async () => {
+    const result = await request(app)
+      .post("/api/employees")
+      .send({ name: "To Delete", salary: 2000 });
+    const id = result.body.id;
 
-    if (result.affectedRows === 0)
-      return res.status(404).json({ message: "Employee not found" });
+    const res = await request(app).delete(`/api/employees/${id}`);
+    expect(res.statusCode).toEqual(204);
+  });
 
-    const [rows] = await pool.query("SELECT * FROM employee WHERE id = ?", [
-      id,
-    ]);
-
-    res.json(rows[0]);
-  } catch (error) {
-    return res.status(500).json({ message: "Something goes wrong" });
-  }
-};
+  it("should return 404 when deleting a non-existing employee", async () => {
+    const res = await request(app).delete("/api/employees/9999");
+    expect(res.statusCode).toEqual(404);
+  });
+});
