@@ -52,10 +52,10 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # Linter comentado para evitar bloqueos visuales
-      # - name: Run linter
-      #   run: npm run lint
-      #   continue-on-error: true
+      
+      - name: Run linter
+        run: npm run lint
+        continue-on-error: true
 
       - name: Install MySQL client
         run: |
