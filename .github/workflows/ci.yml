@@ -80,8 +80,8 @@ jobs:
 
       - name: Upload coverage artifact
         if: always()
-        uses: [actions/upload-artifact@v4](https://github.com)
+        uses: actions/upload-artifact@v4
         with:
-          # SOLUCIÓN AL ERROR 409: Nombre dinámico por versión de Node
+          # Nombre dinámico para evitar el error 409 Conflict
           name: coverage-report-node-${{ matrix.node-version }}
           path: coverage/
