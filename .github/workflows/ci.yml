@@ -18,20 +18,19 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-          MYSQL_DATABASE: ${{ secrets.DB_NAME }}
-          MYSQL_USER: ${{ secrets.DB_USER }}
-          MYSQL_PASSWORD: ${{ secrets.DB_PASSWORD }}
-        # No exponemos puertos al host para evitar exponer servicios innecesariamente.
-        # ports: []
+          # Usamos las variables de entorno definidas en el JOB, no los secrets directamente aquí
+          MYSQL_ROOT_PASSWORD: ${{ env.DB_PASSWORD }}
+          MYSQL_DATABASE: ${{ env.DB_DATABASE }}
+          MYSQL_USER: ${{ env.DB_USER }}
+          MYSQL_PASSWORD: ${{ env.DB_PASSWORD }}
         options: >-
-          --health-cmd="mysqladmin ping -h localhost -u ${{ secrets.DB_USER }} -p${{ secrets.DB_PASSWORD }}"
+          --health-cmd="mysqladmin ping -h localhost -u ${{ env.DB_USER }} -p${{ env.DB_PASSWORD }}"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
 
+    # Variables de entorno globales para todo el Job
     env:
-      # Variables de entorno que usarán los pasos (puedes leerlas desde secrets)
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
       DB_USER: ${{ secrets.DB_USER }}
@@ -54,14 +53,14 @@ jobs:
 
       - name: Run linter
         run: npm run lint
-        continue-on-error: true
+        continue-on-error: true # Permite que el workflow continúe si el lint falla
+
       - name: Install MySQL client (needed for wait & init)
         run: |
           sudo apt-get update
           sudo apt-get install -y default-mysql-client
 
       - name: Wait for MySQL to be ready
-        # usamos el cliente mysql local para comprobar disponibilidad
         run: |
           echo "Waiting for MySQL..."
           until mysql -h 127.0.0.1 -u "${{ env.DB_USER }}" -p"${{ env.DB_PASSWORD }}" -e "SELECT 1" ; do
@@ -75,14 +74,7 @@ jobs:
 
       - name: Run tests with coverage
         run: npm run test:coverage
-        continue-on-error: true
-        env:
-          PORT: ${{ env.PORT }}
-          DB_HOST: ${{ env.DB_HOST }}
-          DB_USER: ${{ env.DB_USER }}
-          DB_PASSWORD: ${{ env.DB_PASSWORD }}
-          DB_DATABASE: ${{ env.DB_DATABASE }}
-          DB_PORT: ${{ env.DB_PORT }}
+        continue-on-error: true # Permite que el workflow continúe si la cobertura no es suficiente
 
       - name: Upload coverage artifact
         if: always()
@@ -90,3 +82,4 @@ jobs:
         with:
           name: coverage-report
           path: coverage/
+
