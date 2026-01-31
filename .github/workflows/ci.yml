@@ -21,7 +21,7 @@ jobs:
           MYSQL_ROOT_PASSWORD: mypassword
           MYSQL_DATABASE: companydb
           MYSQL_USER: fazt
-          MYSQL_PASSWORD: faztpassword
+          MYSQL_PASSWORD: mypassword
           MYSQL_ROOT_HOST: '%' 
         ports:
           - 3306:3306
