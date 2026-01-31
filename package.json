@@ -7,8 +7,14 @@
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
-    "pretest": "cross-env NODE_ENV=test jest --clearCache"
+
+    "lint": "eslint .",
+
+    "pretest": "cross-env NODE_ENV=test jest --clearCache",
+
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+
+    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --detectOpenHandles --coverage --ci"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +26,7 @@
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
+    "eslint": "^8.56.0",
     "jest": "^29.0.3",
     "morgan": "^1.10.0",
     "nodemon": "^2.0.20",
