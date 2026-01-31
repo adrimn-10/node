@@ -18,28 +18,22 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          # Usamos los valores literales aquí para evitar errores de sintaxis en este bloque
           MYSQL_ROOT_PASSWORD: mypassword
           MYSQL_DATABASE: companydb
           MYSQL_USER: fazt
-          MYSQL_PASSWORD: mypassword
+          MYSQL_PASSWORD: faztpassword
           MYSQL_ROOT_HOST: '%' 
         ports:
-          - 3306:3306 # <-- EXPONEMOS EL PUERTO LOCALMENTE
+          - 3306:3306
         options: >-
           --health-cmd="mysqladmin ping"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
-          
 
-
-    # Variables de entorno globales para todo el Job
     env:
-      # El hostname ahora es 127.0.0.1 para usar el puerto expuesto localmente
-      DB_HOST: 127.0.0.1 # <-- CAMBIO CLAVE AQUÍ
+      DB_HOST: 127.0.0.1
       DB_PORT: 3306
-      # Aquí usamos los secrets de GitHub para los steps
       DB_USER: ${{ secrets.DB_USER }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       DB_DATABASE: ${{ secrets.DB_NAME }}
@@ -58,11 +52,12 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      #- name: Run linter
-      #  run: npm run lint
-       # continue-on-error: true
+      # Linter comentado para evitar bloqueos visuales
+      # - name: Run linter
+      #   run: npm run lint
+      #   continue-on-error: true
 
-      - name: Install MySQL client (needed for wait & init)
+      - name: Install MySQL client
         run: |
           sudo apt-get update
           sudo apt-get install -y default-mysql-client
@@ -70,7 +65,6 @@ jobs:
       - name: Wait for MySQL to be ready
         run: |
           echo "Waiting for MySQL..."
-          # En los steps usamos DB_HOST: 127.0.0.1
           until mysql -h ${{ env.DB_HOST }} -u "${{ env.DB_USER }}" -p"${{ env.DB_PASSWORD }}" -e "SELECT 1" ; do
             sleep 3
           done
@@ -78,7 +72,6 @@ jobs:
 
       - name: Initialize database
         run: |
-          # En los steps usamos DB_HOST: 127.0.0.1
           mysql -h ${{ env.DB_HOST }} -u "${{ env.DB_USER }}" -p"${{ env.DB_PASSWORD }}" "${{ env.DB_DATABASE }}" < db/database.sql
 
       - name: Run tests with coverage
@@ -87,7 +80,8 @@ jobs:
 
       - name: Upload coverage artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: [actions/upload-artifact@v4](https://github.com)
         with:
-          name: coverage-report
+          # SOLUCIÓN AL ERROR 409: Nombre dinámico por versión de Node
+          name: coverage-report-node-${{ matrix.node-version }}
           path: coverage/
