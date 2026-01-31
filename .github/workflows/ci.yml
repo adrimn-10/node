@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [18, 20]
+        node-version:
 
     services:
       mysql:
@@ -23,6 +23,8 @@ jobs:
           MYSQL_DATABASE: companydb
           MYSQL_USER: fazt
           MYSQL_PASSWORD: faztpassword
+        ports:
+          - 3306:3306 # <-- EXPONEMOS EL PUERTO LOCALMENTE
         options: >-
           --health-cmd="mysqladmin ping -h localhost -u fazt -pfaztpassword"
           --health-interval=10s
@@ -31,8 +33,8 @@ jobs:
 
     # Variables de entorno globales para todo el Job
     env:
-      # El hostname ahora es 'mysql', el nombre del servicio
-      DB_HOST: mysql
+      # El hostname ahora es 127.0.0.1 para usar el puerto expuesto localmente
+      DB_HOST: 127.0.0.1 # <-- CAMBIO CLAVE AQUÍ
       DB_PORT: 3306
       # Aquí usamos los secrets de GitHub para los steps
       DB_USER: ${{ secrets.DB_USER }}
@@ -55,7 +57,7 @@ jobs:
 
       - name: Run linter
         run: npm run lint
-        continue-on-error: true # Permite que el workflow continúe si el lint falla
+        continue-on-error: true
 
       - name: Install MySQL client (needed for wait & init)
         run: |
@@ -65,7 +67,7 @@ jobs:
       - name: Wait for MySQL to be ready
         run: |
           echo "Waiting for MySQL..."
-          # En los steps usamos la variable DB_HOST: mysql
+          # En los steps usamos DB_HOST: 127.0.0.1
           until mysql -h ${{ env.DB_HOST }} -u "${{ env.DB_USER }}" -p"${{ env.DB_PASSWORD }}" -e "SELECT 1" ; do
             sleep 3
           done
@@ -73,12 +75,12 @@ jobs:
 
       - name: Initialize database
         run: |
-          # En los steps usamos la variable DB_HOST: mysql
+          # En los steps usamos DB_HOST: 127.0.0.1
           mysql -h ${{ env.DB_HOST }} -u "${{ env.DB_USER }}" -p"${{ env.DB_PASSWORD }}" "${{ env.DB_DATABASE }}" < db/database.sql
 
       - name: Run tests with coverage
         run: npm run test:coverage
-        continue-on-error: true # Permite que el workflow continúe si la cobertura no es suficiente
+        continue-on-error: true
 
       - name: Upload coverage artifact
         if: always()
