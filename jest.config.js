@@ -5,10 +5,10 @@ export default {
   coveragePathIgnorePatterns: ["/node_modules/"],
   transform: {},
 
-  // Cobertura ajustada para ser realista con bloques try/catch
+
   coverageThreshold: {
     global: {
-      branches: 50,      // Bajamos este porque los 'catch' cuentan como ramas no cubiertas
+      branches: 50,      
       functions: 80,
       lines: 80,
       statements: 80
