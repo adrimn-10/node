@@ -82,6 +82,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          # Nombre dinámico para evitar el error 409 Conflict
           name: coverage-report-node-${{ matrix.node-version }}
           path: coverage/
